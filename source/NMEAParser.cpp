@@ -1,6 +1,9 @@
 #include <CodalDmesg.h>
 #include <NMEAParser.h>
 
+#define DEVICE_ID_GPS 55
+#define GPS_EVT_DATA_UPDATE 1
+
 namespace codal
 {
 NMEAParser::NMEAParser() : CodalComponent(), GlobalPosition()
@@ -26,6 +29,8 @@ void NMEAParser::parse() {
 
     _buffer.fill(0);
     _bufferWritePos = 0;
+
+    Event(DEVICE_ID_GPS, GPS_EVT_DATA_UPDATE);
 }
 
 void NMEAParser::_parseGNGGA()
