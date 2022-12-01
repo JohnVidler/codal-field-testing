@@ -1,16 +1,26 @@
 #include <CodalDmesg.h>
 #include <ZOEM8QGlobalPosition.h>
+#include <ZOEM8QConfiguration.h>
 
 namespace codal
 {
 
-ZOEM8QGlobalPosition::ZOEM8QGlobalPosition(I2C &_i2c) : NMEAParser()
+ZOEM8QGlobalPosition::ZOEM8QGlobalPosition(I2C &_i2c, ZOEM8QConfiguration& config) : NMEAParser()
 {
     this->_i2c = &_i2c;
+    this->_config = &config;
 }
+
+bool _sentConfig = false;
 
 void ZOEM8QGlobalPosition::periodicCallback()
 {
+    if (!_sentConfig) {
+        _i2c->write(ZOEM8Q_I2C_REGISTER << 1, (char*) _config->asMessage(), 38);
+
+        DMESG("Sent config over i2c");
+        _sentConfig = true;
+    }
     /*
      * We can read data from the 0xFD and 0xFE registers in order to determine the amount of bytes
      * available to be read
@@ -18,8 +28,8 @@ void ZOEM8QGlobalPosition::periodicCallback()
 
     uint8_t res[2] = {0};
 
-    if (_i2c->readRegister(0x42 << 1, 0xfd, res, 1, true) != DEVICE_OK ||
-        _i2c->readRegister(0x42 << 1, 0xfe, res + 1, 1, true) != DEVICE_OK)
+    if (_i2c->readRegister(ZOEM8Q_I2C_REGISTER << 1, 0xfd, res, 1, true) != DEVICE_OK ||
+        _i2c->readRegister(ZOEM8Q_I2C_REGISTER << 1, 0xfe, res + 1, 1, true) != DEVICE_OK)
     {
         DMESG("I2C error reading GPS length!!");
         return;
@@ -32,7 +42,7 @@ void ZOEM8QGlobalPosition::periodicCallback()
         int bytesToRead = totalBytes < 128 ? totalBytes : 128;
         char *read = (char *)malloc(bytesToRead);
 
-        if (_i2c->read(0x42 << 1, (uint8_t *)read, bytesToRead, false) != DEVICE_OK)
+        if (_i2c->read(ZOEM8Q_I2C_REGISTER << 1, (uint8_t *)read, bytesToRead, false) != DEVICE_OK)
         {
             DMESG("I2C error reading GPS!!");
             return;
